@@ -56,7 +56,7 @@ ME=$(basename "$0")
 
 if [[ ! " $VERBS " =~ " $ME " ]] && [[ ! " $JVERBS " =~ " $ME " ]]; then
     echo "Usage: <VERB> <service-name>"
-    echo "VERBs are hard-linked to this script, so you can call it with the verb as the name of the script."
+    echo "VERBs are soft-linked to this script, so you can call it with the verb as the name of the script."
     echo "Verbs: $VERBS"
     echo "Journal Verbs: $JVERBS"
     exit 1
