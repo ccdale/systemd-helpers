@@ -35,10 +35,20 @@ From this repository directory:
 
 ```bash
 chmod +x systemd-helper.sh
-./systemd-helper.sh install
+./systemd-helper.sh install [prefix]
 ```
 
-This creates symlinks in `~/.local/bin` for all verbs.
+This creates symlinks in `~/.local/bin` for all verbs, optionally prepended with `prefix`.
+
+Examples:
+
+```bash
+# Install as: start, stop, restart ...
+./systemd-helper.sh install
+
+# Install as: s-start, s-stop, s-restart ...
+./systemd-helper.sh install s-
+```
 
 Make sure `~/.local/bin` is on your `PATH`.
 
@@ -70,7 +80,7 @@ This reflects the current script behavior and test coverage.
 ./systemd-helper.sh uninstall
 ```
 
-This removes the verb symlinks from `~/.local/bin`.
+This removes all symlinks in `~/.local/bin` that point to this script, regardless of what prefix was used at install time.
 
 ## Testing
 

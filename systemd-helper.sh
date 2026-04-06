@@ -11,26 +11,33 @@ VERBS="start stop restart status enable disable"
 JVERBS="follow logs blogs"
 
 install() {
+    local prefix="${1:-}"
     for verb in $VERBS $JVERBS; do
-        ln -sf "$(realpath "$0")" "$USERBIN/$verb"
+        ln -sf "$(realpath "$0")" "$USERBIN/${prefix}${verb}"
     done
 }
 
 uninstall() {
-    for verb in $VERBS $JVERBS; do
-        rm -f "$USERBIN/$verb"
+    local script_path removed=0
+    script_path="$(realpath "$0")"
+    for link in "$USERBIN"/*; do
+        [ -L "$link" ] || continue
+        if [ "$(readlink "$link")" = "$script_path" ]; then
+            rm -f "$link"
+            removed=$((removed + 1))
+        fi
     done
+    echo "Removed $removed systemd-helper verb(s) from $USERBIN"
 }
 
 if [ "$1" = "install" ]; then
-    install
+    install "${2:-}"
     echo "Installed systemd-helper verbs to $USERBIN"
     exit 0
 fi
 
 if [ "$1" = "uninstall" ]; then
     uninstall
-    echo "Removed systemd-helper verbs from $USERBIN"
     exit 0
 fi
 
@@ -51,8 +58,24 @@ if [ -d "$confd" ]; then
     fi
 fi
 
+# Resolve the verb from the command name, stripping a prefix if needed.
+# Strips one character at a time from the front until a known verb is found
+# or fewer than 4 characters remain (no verb is shorter than 4 chars).
+resolve_verb() {
+    local name="$1"
+    while [[ ${#name} -ge 4 ]]; do
+        if [[ " $VERBS $JVERBS " =~ " $name " ]]; then
+            printf "%s" "$name"
+            return 0
+        fi
+        name="${name:1}"
+    done
+    return 1
+}
+
 # Check what name this script was called with
 ME=$(basename "$0")
+ME=$(resolve_verb "$ME") || ME=""
 
 if [[ ! " $VERBS " =~ " $ME " ]] && [[ ! " $JVERBS " =~ " $ME " ]]; then
     echo "Usage: <VERB> <service-name>"

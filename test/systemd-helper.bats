@@ -84,21 +84,44 @@ invoke_as() {
   [ "$status" -eq 0 ]
 }
 
-@test "uninstall removes links for all verbs" {
+@test "uninstall removes only links pointing to this script" {
+  mkdir -p "$HOME/.local/bin"
+  # Create two real symlinks pointing to this script
+  /usr/bin/ln -sf "$SCRIPT_UNDER_TEST" "$HOME/.local/bin/start"
+  /usr/bin/ln -sf "$SCRIPT_UNDER_TEST" "$HOME/.local/bin/s-stop"
+  # Create a decoy symlink pointing elsewhere
+  /usr/bin/ln -sf "/usr/bin/true" "$HOME/.local/bin/other"
+
   run "$SCRIPT_UNDER_TEST" uninstall
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Removed systemd-helper verbs"* ]]
+  [[ "$output" == *"Removed 2 systemd-helper verb(s)"* ]]
 
-  run grep -c '^rm ' "$CALLS_FILE"
-  [ "$status" -eq 0 ]
-  [ "$output" -eq 9 ]
-
+  # Both script links should have been removed
   run grep -F "rm [-f] [$HOME/.local/bin/start]" "$CALLS_FILE"
   [ "$status" -eq 0 ]
-
-  run grep -F "rm [-f] [$HOME/.local/bin/blogs]" "$CALLS_FILE"
+  run grep -F "rm [-f] [$HOME/.local/bin/s-stop]" "$CALLS_FILE"
   [ "$status" -eq 0 ]
+
+  # Decoy link should NOT have been removed
+  run grep -F "rm [-f] [$HOME/.local/bin/other]" "$CALLS_FILE"
+  [ "$status" -ne 0 ]
+}
+
+@test "install with prefix creates prefixed links" {
+  run "$SCRIPT_UNDER_TEST" install s-
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Installed systemd-helper verbs"* ]]
+
+  run grep -F "ln [-sf] [$SCRIPT_UNDER_TEST] [$HOME/.local/bin/s-start]" "$CALLS_FILE"
+  [ "$status" -eq 0 ]
+  run grep -F "ln [-sf] [$SCRIPT_UNDER_TEST] [$HOME/.local/bin/s-blogs]" "$CALLS_FILE"
+  [ "$status" -eq 0 ]
+
+  # Verify unprefixed names were NOT created
+  run grep -F "ln [-sf] [$SCRIPT_UNDER_TEST] [$HOME/.local/bin/start]" "$CALLS_FILE"
+  [ "$status" -ne 0 ]
 }
 
 @test "systemctl verbs call systemctl with verb and service" {
@@ -106,6 +129,22 @@ invoke_as() {
 
   [ "$status" -eq 0 ]
   run grep -F "systemctl [restart] [sshd]" "$CALLS_FILE"
+  [ "$status" -eq 0 ]
+}
+
+@test "prefixed verb name dispatches correct verb" {
+  invoke_as sys-status myapp
+
+  [ "$status" -eq 0 ]
+  run grep -F "systemctl [status] [myapp]" "$CALLS_FILE"
+  [ "$status" -eq 0 ]
+}
+
+@test "prefixed journal verb name dispatches correct verb" {
+  invoke_as sys-blogs myapp
+
+  [ "$status" -eq 0 ]
+  run grep -F "journalctl [--unit=myapp] [-b]" "$CALLS_FILE"
   [ "$status" -eq 0 ]
 }
 

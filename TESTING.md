@@ -28,7 +28,8 @@ Examples:
 
 - Usage errors for missing service/unsupported verb
 - `install` command link creation for all verbs
-- `uninstall` command link removal for all verbs
+- `install` with optional prefix creates prefixed link names
+- `uninstall` removes symlinks pointing to this script and preserves unrelated links
 - Dispatch to `systemctl` for service verbs
 - Dispatch to `journalctl` for journal verbs
 - `follow` adds `-f`
